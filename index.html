@@ -157,6 +157,7 @@
   .viewfinder{
     position:absolute; top:16%; left:12%; right:12%; bottom:16%;
     pointer-events:none;
+    transition:opacity .25s ease;
   }
   .vf-corner{position:absolute; width:26px; height:26px; border:3px solid #34D399;}
   .vf-corner.tl{top:0;left:0;border-right:none;border-bottom:none;border-top-left-radius:6px;}
@@ -815,6 +816,9 @@ let homeStream = null, homeDetectLoop = null, homeTrack = null, torchOn = false;
 let overlayStream = null, overlayDetectLoop = null, overlayTarget = null;
 let pendingCartAdd = null;
 let lastScanTime = 0;
+let scanLocked = false;
+const SCAN_COOLDOWN_MS = 1500;   // pause before the camera accepts another scan
+const vibrateSupported = typeof navigator !== 'undefined' && 'vibrate' in navigator;
 const detectorSupported = 'BarcodeDetector' in window;
 let detector = null;
 if(detectorSupported){
@@ -825,6 +829,7 @@ if(detectorSupported){
 async function startHomeCamera(){
   const video = document.getElementById('homeVideo');
   const fallback = document.getElementById('homeCamFallback');
+  scanLocked = false;
   if(homeStream){ fallback.style.display='none'; video.style.display='block'; return; }
   try{
     homeStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
@@ -861,11 +866,10 @@ async function toggleTorch(){
 function startHomeDetectLoop(){
   const video = document.getElementById('homeVideo');
   async function tick(){
-    if(video.readyState >= 2 && Date.now() - lastScanTime > 900){
+    if(!scanLocked && video.readyState >= 2){
       try{
         const codes = await detector.detect(video);
         if(codes && codes.length){
-          lastScanTime = Date.now();
           handleHomeScan(codes[0].rawValue);
         }
       }catch(e){ /* ignore transient detect errors */ }
@@ -875,23 +879,36 @@ function startHomeDetectLoop(){
   homeDetectLoop = requestAnimationFrame(tick);
 }
 function vibrate(pattern){
-  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+  if(!vibrateSupported) return false;
+  try{ return navigator.vibrate(pattern); }catch(e){ return false; }
 }
 
 function handleHomeScan(code){
   const pill = document.getElementById('scanPill');
+  const vf = document.getElementById('homeViewfinder');
+
+  // lock scanning for a beat so the same barcode isn't re-added while still in frame
+  scanLocked = true;
+  lastScanTime = Date.now();
+  if(vf) vf.style.opacity = '0.4';
+
   if(products[code]){
-    vibrate(35);
+    const felt = vibrate(40);
     addToCart(code, 1);
     pill.textContent = 'Added: ' + products[code].name;
-    toast(products[code].name + ' added — ' + money(products[code].price));
+    toast(products[code].name + ' added — ' + money(products[code].price) + (felt === false ? ' (vibration unavailable)' : ''));
   } else {
-    vibrate([25, 60, 25]);
+    vibrate([25, 70, 25]);
     pill.textContent = 'New barcode — add product details';
     pendingCartAdd = code;
     openAddProduct(code);
   }
-  setTimeout(()=>{ pill.textContent = 'Point camera at a barcode'; }, 1800);
+
+  setTimeout(()=>{
+    pill.textContent = 'Point camera at a barcode';
+    if(vf) vf.style.opacity = '1';
+    scanLocked = false;
+  }, SCAN_COOLDOWN_MS);
 }
 
 /* ---- overlay (single-shot) scanner used by Add Product + Product search ---- */
