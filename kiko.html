@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15121F">
+<title>Kiko — Billing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1F0F8;
+    --sheet:#F7F6FC;
+    --card:#FFFFFF;
+    --ink:#1C1A2B;
+    --muted:#8583A0;
+    --accent:#6552E8;
+    --accent-ink:#FFFFFF;
+    --accent-soft:#EDEAFC;
+    --line:#E6E4F2;
+    --green:#31C48D;
+    --danger:#E5484D;
+    --danger-soft:#FCEAEA;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    --shadow: 0 18px 40px -18px rgba(36,25,90,.28);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overscroll-behavior:none;}
+  body{
+    margin:0;
+    font-family:'Plus Jakarta Sans', system-ui, sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  .frame{
+    width:100vw; width:100dvw;
+    height:100vh; height:100dvh;
+    background:var(--bg);
+    overflow:hidden;
+    position:relative;
+    display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+  }
+  .notch{display:none;}
+  .fs-toggle{
+    position:fixed; z-index:100;
+    top:calc(env(safe-area-inset-top) + 10px); left:10px;
+    width:32px; height:32px; border-radius:50%; border:none;
+    background:rgba(20,16,35,.35); color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; backdrop-filter:blur(6px); opacity:.75;
+  }
+  .fs-toggle svg{width:15px;height:15px;}
+  .view{
+    position:absolute; inset:0;
+    display:none; flex-direction:column;
+    background:var(--bg);
+  }
+  .view.active{display:flex;}
+
+  /* ---------- shared bits ---------- */
+  .topbar{
+    display:flex; align-items:center; gap:12px;
+    padding:20px 20px 12px;
+    flex-shrink:0;
+  }
+  .topbar h1{
+    font-size:18px; font-weight:700; margin:0; flex:1; text-align:center; padding-right:36px;
+    letter-spacing:-.01em;
+  }
+  .iconbtn{
+    width:36px; height:36px; border-radius:11px; border:none;
+    background:var(--card); display:flex; align-items:center; justify-content:center;
+    color:var(--ink); cursor:pointer; flex-shrink:0;
+    box-shadow:0 1px 0 rgba(20,15,60,.04);
+  }
+  .iconbtn:active{transform:scale(.94);}
+  .iconbtn svg{width:18px;height:18px;}
+  .scroll{flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+  .field{margin:0 20px 16px;}
+  .field label{
+    display:block; font-size:13px; font-weight:600; color:var(--accent);
+    margin-bottom:7px;
+  }
+  .field input, .field textarea{
+    width:100%; border:1.5px solid transparent; background:var(--card);
+    border-radius:var(--radius-md); padding:14px 15px; font-size:15.5px;
+    font-family:inherit; color:var(--ink); font-weight:600;
+    box-shadow:0 1px 0 rgba(20,15,60,.03);
+  }
+  .field input::placeholder{color:#B7B5CC; font-weight:500;}
+  .field input:focus, .field textarea:focus{outline:none; border-color:var(--accent);}
+  .field .hint{font-size:12px; color:var(--muted); margin-top:6px;}
+  .field textarea{resize:none; min-height:70px;}
+  .btn-primary{
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    width:calc(100% - 40px); margin:8px 20px; padding:16px; border:none;
+    background:var(--accent); color:var(--accent-ink); font-size:15.5px; font-weight:700;
+    border-radius:var(--radius-md); cursor:pointer; letter-spacing:-.01em;
+    box-shadow:0 12px 22px -10px rgba(101,82,232,.55);
+  }
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:disabled{background:#C7C4E4; box-shadow:none; cursor:not-allowed;}
+  .btn-primary svg{width:18px;height:18px;}
+  .btn-ghost{
+    width:calc(100% - 40px); margin:0 20px 10px; padding:14px; border:none;
+    background:transparent; color:var(--muted); font-size:14.5px; font-weight:700;
+    border-radius:var(--radius-md); cursor:pointer;
+  }
+  .empty{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    padding:50px 40px 20px; color:var(--muted);
+  }
+  .empty .bubble{
+    width:64px; height:64px; border-radius:50%; background:var(--accent-soft);
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+    color:var(--accent);
+  }
+  .empty h3{margin:0 0 6px; color:var(--ink); font-size:16px;}
+  .empty p{margin:0; font-size:13.5px; line-height:1.5;}
+  .toast{
+    position:absolute; left:20px; right:20px; bottom:22px; z-index:80;
+    background:#1C1A2B; color:#fff; padding:13px 16px; border-radius:var(--radius-md);
+    font-size:13.5px; font-weight:600; text-align:center;
+    box-shadow:0 20px 40px -14px rgba(0,0,0,.5);
+    opacity:0; transform:translateY(10px); pointer-events:none;
+    transition:opacity .22s ease, transform .22s ease;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+
+  /* ---------- scan / home view ---------- */
+  #view-scan{padding:0;}
+  .camera-wrap{
+    position:relative; height:46%; min-height:230px; background:#15121F;
+    flex-shrink:0; overflow:hidden;
+  }
+  .camera-wrap video{width:100%; height:100%; object-fit:cover; display:block;}
+  .camera-fallback{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; color:#9F9CC2; text-align:center; padding:0 30px; gap:10px;
+  }
+  .camera-fallback svg{width:34px;height:34px; opacity:.7;}
+  .camera-fallback p{margin:0; font-size:12.5px; line-height:1.5;}
+  .camera-fallback button{
+    margin-top:6px; background:var(--accent); color:#fff; border:none; padding:9px 16px;
+    border-radius:10px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .viewfinder{
+    position:absolute; top:16%; left:12%; right:12%; bottom:16%;
+    pointer-events:none;
+  }
+  .vf-corner{position:absolute; width:26px; height:26px; border:3px solid #34D399;}
+  .vf-corner.tl{top:0;left:0;border-right:none;border-bottom:none;border-top-left-radius:6px;}
+  .vf-corner.tr{top:0;right:0;border-left:none;border-bottom:none;border-top-right-radius:6px;}
+  .vf-corner.bl{bottom:0;left:0;border-right:none;border-top:none;border-bottom-left-radius:6px;}
+  .vf-corner.br{bottom:0;right:0;border-left:none;border-top:none;border-bottom-right-radius:6px;}
+  .scan-line{
+    position:absolute; left:4%; right:4%; height:2px; top:0;
+    background:linear-gradient(90deg, transparent, #34D399, transparent);
+    animation:scanmove 2.1s ease-in-out infinite;
+  }
+  @keyframes scanmove{0%{top:2%;}50%{top:96%;}100%{top:2%;}}
+  .cam-controls{
+    position:absolute; top:14px; right:14px; display:flex; flex-direction:column; gap:10px; z-index:5;
+  }
+  .cam-controls button{
+    width:38px; height:38px; border-radius:50%; border:none; background:rgba(20,16,35,.55);
+    backdrop-filter:blur(6px); color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .cam-controls button.active{background:var(--accent);}
+  .cam-controls svg{width:17px;height:17px;}
+  .scan-pill{
+    position:absolute; left:50%; bottom:12px; transform:translateX(-50%);
+    background:rgba(20,16,35,.6); color:#fff; font-size:11.5px; font-weight:600;
+    padding:7px 14px; border-radius:999px; backdrop-filter:blur(6px);
+  }
+
+  .sheet{
+    flex:1; background:var(--sheet); border-radius:24px 24px 0 0; margin-top:-16px;
+    position:relative; z-index:2; display:flex; flex-direction:column; overflow:hidden;
+    box-shadow:0 -10px 30px -20px rgba(20,15,60,.3);
+  }
+  .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:3px; margin:10px auto 0;}
+  .sheet-head{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:14px 20px 12px; flex-shrink:0;
+  }
+  .sheet-head h2{margin:0; font-size:17px; font-weight:700;}
+  .sheet-head .count{font-size:12.5px; color:var(--muted); font-weight:600; margin-top:2px;}
+  .sheet-head .totalwrap{text-align:right;}
+  .sheet-head .totallabel{font-size:10.5px; letter-spacing:.06em; color:var(--muted); font-weight:700;}
+  .sheet-head .totalval{font-size:19px; font-weight:800; color:var(--accent); font-family:'JetBrains Mono',monospace;}
+  .cart-list{flex:1; overflow-y:auto; padding:0 20px;}
+  .cart-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--card); border-radius:var(--radius-md); padding:13px 14px; margin-bottom:10px;
+  }
+  .cart-item .info{min-width:0;}
+  .cart-item .name{font-size:14.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .cart-item .price{font-size:13px; color:var(--muted); font-weight:600; margin-top:2px; font-family:'JetBrains Mono',monospace;}
+  .qty{display:flex; align-items:center; gap:0; background:var(--sheet); border-radius:10px; flex-shrink:0;}
+  .qty button{
+    width:30px; height:30px; border:none; background:transparent; color:var(--accent);
+    font-size:17px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .qty span{min-width:22px; text-align:center; font-weight:700; font-size:14px;}
+  .sheet-footer{padding:12px 20px 18px; flex-shrink:0;}
+
+  /* ---------- product management ---------- */
+  .search-row{display:flex; gap:10px; margin:0 20px 6px;}
+  .search-row input{
+    flex:1; border:none; background:var(--card); border-radius:var(--radius-md);
+    padding:13px 15px; font-size:14.5px; font-family:inherit; font-weight:600;
+  }
+  .search-row input:focus{outline:2px solid var(--accent);}
+  .scanbtn{
+    width:48px; flex-shrink:0; border:none; background:var(--accent-soft); color:var(--accent);
+    border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .prod-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--card); border-radius:var(--radius-md); padding:13px 14px; margin:0 20px 10px;
+  }
+  .prod-row .info{min-width:0;}
+  .prod-row .name{font-size:15px; font-weight:700;}
+  .prod-row .price{font-size:13px; color:var(--muted); font-weight:600; margin-top:2px; font-family:'JetBrains Mono',monospace;}
+  .prod-row .actions{display:flex; gap:8px; flex-shrink:0;}
+  .prod-row .actions button{
+    width:33px; height:33px; border:none; border-radius:9px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-edit{background:var(--accent-soft); color:var(--accent);}
+  .btn-del{background:var(--danger-soft); color:var(--danger);}
+  .fab{
+    position:absolute; right:20px; bottom:22px; width:54px; height:54px; border-radius:50%;
+    background:var(--accent); border:none; color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 14px 26px -10px rgba(101,82,232,.6); z-index:10;
+  }
+
+  /* ---------- settings ---------- */
+  .avatar-block{display:flex; flex-direction:column; align-items:center; padding:14px 0 22px;}
+  .avatar{
+    width:84px; height:84px; border-radius:50%; background:linear-gradient(160deg,#7C6AF5,#5844D6);
+    color:#fff; font-size:32px; font-weight:800; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 16px 26px -10px rgba(101,82,232,.55);
+  }
+  .avatar-block .shopname{margin-top:12px; font-size:17px; font-weight:800;}
+  .group-label{
+    font-size:11.5px; font-weight:700; letter-spacing:.05em; color:var(--muted);
+    margin:18px 20px 8px; text-transform:uppercase;
+  }
+  .settings-card{background:var(--card); border-radius:var(--radius-md); margin:0 20px; overflow:hidden;}
+  .settings-row{
+    display:flex; align-items:center; gap:13px; padding:14px 15px; cursor:pointer;
+    border-bottom:1px solid var(--line);
+  }
+  .settings-row:last-child{border-bottom:none;}
+  .settings-row .ic{
+    width:38px; height:38px; border-radius:11px; background:var(--accent-soft); color:var(--accent);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .settings-row .ic svg{width:18px;height:18px;}
+  .settings-row .txt{flex:1; min-width:0;}
+  .settings-row .txt .t{font-size:14.5px; font-weight:700;}
+  .settings-row .txt .s{font-size:12.5px; color:var(--muted); margin-top:1px;}
+  .settings-row .chev{color:#C6C4DC; flex-shrink:0;}
+  .settings-row .chev svg{width:16px;height:16px;}
+  .footnote{font-size:11.5px; color:var(--muted); line-height:1.5; margin:12px 24px 0;}
+
+  /* ---------- checkout / receipt ---------- */
+  .receipt{
+    margin:6px 20px 16px; background:var(--card); border-radius:var(--radius-lg);
+    padding:22px 20px; position:relative;
+  }
+  .receipt-head{text-align:center; padding-bottom:14px; border-bottom:1.5px dashed var(--line); margin-bottom:14px;}
+  .receipt-head .rname{font-size:18px; font-weight:800;}
+  .receipt-head .raddr{font-size:12px; color:var(--muted); margin-top:4px; line-height:1.5;}
+  .receipt-line{display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; gap:10px;}
+  .receipt-line .qn{color:var(--muted); font-weight:600;}
+  .receipt-line .amt{font-weight:700; font-family:'JetBrains Mono',monospace;}
+  .receipt-total{
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1.5px dashed var(--line); margin-top:10px; padding-top:12px;
+  }
+  .receipt-total .l{font-size:14px; font-weight:700;}
+  .receipt-total .v{font-size:20px; font-weight:800; color:var(--accent); font-family:'JetBrains Mono',monospace;}
+  .receipt-foot{text-align:center; font-size:12px; color:var(--muted); margin-top:16px; font-style:italic;}
+
+  /* scanner overlay (used from add-product + product mgmt) */
+  .scanner-overlay{
+    position:absolute; inset:0; background:#0D0B1A; z-index:60; display:none; flex-direction:column;
+  }
+  .scanner-overlay.active{display:flex;}
+  .scanner-overlay .camera-wrap{height:100%; flex:1;}
+  .scanner-close{
+    position:absolute; top:16px; left:16px; z-index:6; width:38px; height:38px; border-radius:50%;
+    background:rgba(255,255,255,.15); border:none; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<button class="fs-toggle" id="fsToggle" onclick="toggleFullscreen()" title="Fullscreen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+</button>
+<div class="frame" id="frame">
+
+  <!-- ============ SCAN / HOME ============ -->
+  <section class="view active" id="view-scan">
+    <div class="camera-wrap" id="homeCamWrap">
+      <video id="homeVideo" autoplay playsinline muted></video>
+      <div class="camera-fallback" id="homeCamFallback" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <p id="homeCamMsg">Camera access is off. Turn it on to scan barcodes, or add items manually.</p>
+        <button onclick="startHomeCamera()">Enable camera</button>
+      </div>
+      <div class="viewfinder" id="homeViewfinder">
+        <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+        <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+        <div class="scan-line"></div>
+      </div>
+      <div class="cam-controls">
+        <button title="Settings" onclick="showView('view-settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.21.63.79 1.05 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+        <button id="torchBtn" title="Flashlight" onclick="toggleTorch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a5 5 0 00-3 9c1 .8 1 1.5 1 3h4c0-1.5 0-2.2 1-3a5 5 0 00-3-9z"/></svg>
+        </button>
+        <button title="Toggle camera" onclick="toggleHomeCamera()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </button>
+      </div>
+      <div class="scan-pill" id="scanPill">Point camera at a barcode</div>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <div>
+          <h2>Scanned Items</h2>
+          <div class="count" id="cartCount">0 items total</div>
+        </div>
+        <div class="totalwrap">
+          <div class="totallabel">TOTAL PRICE</div>
+          <div class="totalval" id="cartTotal">₹0.00</div>
+        </div>
+      </div>
+      <div class="cart-list" id="cartList"></div>
+      <div class="sheet-footer">
+        <button class="btn-primary" id="reviewBtn" disabled onclick="showView('view-checkout'); renderCheckout();">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+          Review Order
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADD PRODUCT ============ -->
+  <section class="view" id="view-add-product">
+    <div class="topbar">
+      <button class="iconbtn" onclick="showView('view-scan')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1 id="addProdTitle">Add Product</h1>
+    </div>
+    <div class="scroll">
+      <div class="field">
+        <label>Barcode</label>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="apBarcode" inputmode="numeric" placeholder="e.g. 8901234567890">
+          <button class="scanbtn" onclick="openScanner('ap')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4a1 1 0 011-1h3M21 7V4a1 1 0 00-1-1h-3M3 17v3a1 1 0 001 1h3M21 17v3a1 1 0 01-1 1h-3M7 12h10"/></svg>
+          </button>
+        </div>
+        <div class="hint">Tap the icon to open camera scanner</div>
+      </div>
+      <div class="field">
+        <label>Product Name</label>
+        <input type="text" id="apName" placeholder="e.g. Notebook">
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <input type="number" id="apPrice" inputmode="decimal" placeholder="₹ 0">
+      </div>
+    </div>
+    <button class="btn-primary" id="apSubmitBtn" onclick="submitAddProduct()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+      Add Product
+    </button>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="view-settings">
+    <div class="topbar">
+      <button class="iconbtn" onclick="showView('view-scan')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Settings</h1>
+    </div>
+    <div class="scroll">
+      <div class="avatar-block">
+        <div class="avatar" id="settingsAvatar">K</div>
+        <div class="shopname" id="settingsShopName">Kiko</div>
+      </div>
+
+      <div class="group-label">Management</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="showView('view-products'); renderProductList();">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4a1 1 0 011-1h3M21 7V4a1 1 0 00-1-1h-3M3 17v3a1 1 0 001 1h3M21 17v3a1 1 0 01-1 1h-3M7 12h10"/></svg></div>
+          <div class="txt"><div class="t">Products</div><div class="s">Manage stock and barcodes</div></div>
+          <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
+        <div class="settings-row" onclick="showView('view-shop'); loadShopForm();">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l1-5h16l1 5M4 9v10h16V9M4 9a2 2 0 004 0 2 2 0 004 0 2 2 0 004 0 2 2 0 004 0"/></svg></div>
+          <div class="txt"><div class="t">Shop Details</div><div class="s">Edit business info &amp; address</div></div>
+          <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg></div>
+        </div>
+      </div>
+
+      <div class="group-label">Hardware</div>
+      <div class="settings-card">
+        <div class="settings-row" style="cursor:default;">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></div>
+          <div class="txt"><div class="t">Print Device</div><div class="s">No printer connected</div></div>
+          <div style="display:flex; gap:8px;">
+            <button class="iconbtn" style="width:32px;height:32px;" onclick="toast('No printer to refresh yet')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            </button>
+            <button class="iconbtn" style="width:32px;height:32px;" onclick="toast('Pair a printer in your phone\\'s Bluetooth settings first')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.21.63.79 1.05 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="footnote">To connect a new device, tap the Settings gear to pair in your phone's Bluetooth settings, then return and hit Refresh.</div>
+    </div>
+  </section>
+
+  <!-- ============ SHOP DETAILS ============ -->
+  <section class="view" id="view-shop">
+    <div class="topbar">
+      <button class="iconbtn" onclick="showView('view-settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Shop Details</h1>
+    </div>
+    <div class="scroll">
+      <div style="margin:0 20px 16px;">
+        <div style="font-size:13.5px; font-weight:700; color:var(--ink);">General Information</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:3px;">These details will appear on your digital and printed receipts.</div>
+      </div>
+      <div class="field"><label>Shop Name</label><input id="shName" placeholder="Your shop name"></div>
+      <div class="field"><label>Address Line 1</label><input id="shAddr1" placeholder="City"></div>
+      <div class="field"><label>Address Line 2 (Optional)</label><input id="shAddr2" placeholder="Area - Pincode"></div>
+      <div class="field"><label>Phone Number</label><input id="shPhone" inputmode="tel" placeholder="10-digit number"></div>
+      <div class="field"><label>UPI ID</label><input id="shUpi" placeholder="name@bank"></div>
+      <div class="field">
+        <label>Receipt Footer Text</label>
+        <textarea id="shFooter" maxlength="150" placeholder="Thank you, visit again!" oninput="document.getElementById('shFooterCount').textContent = this.value.length + '/150'"></textarea>
+        <div class="hint" style="text-align:right;" id="shFooterCount">0/150</div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveShopDetails()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+      Save Details
+    </button>
+  </section>
+
+  <!-- ============ PRODUCT MANAGEMENT ============ -->
+  <section class="view" id="view-products">
+    <div class="topbar">
+      <button class="iconbtn" onclick="showView('view-settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Product Management</h1>
+    </div>
+    <div class="search-row">
+      <input type="text" id="pmSearch" placeholder="Scan or enter barcode" oninput="renderProductList()">
+      <button class="scanbtn" onclick="openScanner('pm')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V4a1 1 0 011-1h3M21 7V4a1 1 0 00-1-1h-3M3 17v3a1 1 0 001 1h3M21 17v3a1 1 0 01-1 1h-3M7 12h10"/></svg>
+      </button>
+    </div>
+    <div class="hint" style="margin:0 20px 10px;">Tap the icon to open camera scanner</div>
+    <div class="scroll" id="productListWrap" style="position:relative;"></div>
+    <button class="fab" onclick="openAddProduct()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </section>
+
+  <!-- ============ CHECKOUT ============ -->
+  <section class="view" id="view-checkout">
+    <div class="topbar">
+      <button class="iconbtn" onclick="showView('view-scan')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Review Order</h1>
+    </div>
+    <div class="scroll">
+      <div class="receipt" id="receiptBox"></div>
+    </div>
+    <button class="btn-primary" onclick="completeOrder()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>
+      Complete Order
+    </button>
+    <button class="btn-ghost" onclick="showView('view-scan')">Keep scanning</button>
+  </section>
+
+  <!-- ============ SCANNER OVERLAY (for Add Product / Product Search) ============ -->
+  <div class="scanner-overlay" id="scannerOverlay">
+    <button class="scanner-close" onclick="closeScanner()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="camera-wrap">
+      <video id="overlayVideo" autoplay playsinline muted></video>
+      <div class="camera-fallback" id="overlayCamFallback" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        <p id="overlayCamMsg">Couldn't access the camera. Check permissions and try again.</p>
+        <button onclick="startOverlayCamera()">Try again</button>
+      </div>
+      <div class="viewfinder">
+        <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+        <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+        <div class="scan-line"></div>
+      </div>
+      <div class="scan-pill">Align barcode within the frame</div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   STATE
+============================================================ */
+let products = {};   // barcode -> {barcode,name,price}
+let cart = {};        // barcode -> {barcode,name,price,qty}
+let shop = { name:'Kiko', addr1:'', addr2:'', phone:'', upi:'', footer:'Thank you, visit again!' };
+
+const STORE_KEYS = { products:'kiko:products', cart:'kiko:cart', shop:'kiko:shop' };
+const hasStorage = () => typeof window.storage !== 'undefined';
+
+async function loadAll(){
+  if(!hasStorage()){ seedDemoProducts(); render(); return; }
+  try{ const r = await window.storage.get(STORE_KEYS.products); if(r) products = JSON.parse(r.value); }catch(e){}
+  try{ const r = await window.storage.get(STORE_KEYS.cart); if(r) cart = JSON.parse(r.value); }catch(e){}
+  try{ const r = await window.storage.get(STORE_KEYS.shop); if(r) shop = Object.assign(shop, JSON.parse(r.value)); }catch(e){}
+  if(Object.keys(products).length === 0) seedDemoProducts();
+  render();
+}
+function seedDemoProducts(){
+  products = {
+    '8901063020017': { barcode:'8901063020017', name:'Beer', price:115 },
+    '8901063020024': { barcode:'8901063020024', name:'Bottle', price:20 },
+    '8901063020031': { barcode:'8901063020031', name:'Bokk', price:10 },
+  };
+  persistProducts();
+}
+async function persistProducts(){ if(hasStorage()){ try{ await window.storage.set(STORE_KEYS.products, JSON.stringify(products), false);}catch(e){} } }
+async function persistCart(){ if(hasStorage()){ try{ await window.storage.set(STORE_KEYS.cart, JSON.stringify(cart), false);}catch(e){} } }
+async function persistShop(){ if(hasStorage()){ try{ await window.storage.set(STORE_KEYS.shop, JSON.stringify(shop), false);}catch(e){} } }
+
+function render(){
+  renderCart();
+  renderSettingsHeader();
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function showView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id !== 'view-scan') stopHomeCamera();
+  if(id === 'view-scan') startHomeCamera();
+  if(id === 'view-settings') renderSettingsHeader();
+}
+
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* ============================================================
+   CART
+============================================================ */
+function money(n){ return '₹' + Number(n).toFixed(2); }
+
+function addToCart(barcode, qtyDelta){
+  const p = products[barcode];
+  if(!p) return;
+  if(!cart[barcode]) cart[barcode] = { barcode, name:p.name, price:p.price, qty:0 };
+  cart[barcode].qty += qtyDelta;
+  cart[barcode].price = p.price;
+  cart[barcode].name = p.name;
+  if(cart[barcode].qty <= 0) delete cart[barcode];
+  persistCart();
+  renderCart();
+}
+
+function renderCart(){
+  const list = document.getElementById('cartList');
+  const items = Object.values(cart);
+  const totalQty = items.reduce((s,i)=>s+i.qty,0);
+  const totalPrice = items.reduce((s,i)=>s+i.qty*i.price,0);
+  document.getElementById('cartCount').textContent = totalQty + ' item' + (totalQty===1?'':'s') + ' total';
+  document.getElementById('cartTotal').textContent = money(totalPrice);
+  document.getElementById('reviewBtn').disabled = items.length === 0;
+
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="bubble"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M3 3h2l1 3"/></svg></div>
+      <h3>List is empty</h3>
+      <p>Scanned items will appear here as you scan them with the camera above.</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = items.map(i => `
+    <div class="cart-item">
+      <div class="info">
+        <div class="name">${escapeHtml(i.name)}</div>
+        <div class="price">${money(i.price)}</div>
+      </div>
+      <div class="qty">
+        <button onclick="addToCart('${i.barcode}', -1)">−</button>
+        <span>${i.qty}</span>
+        <button onclick="addToCart('${i.barcode}', 1)">+</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderCheckout(){
+  const items = Object.values(cart);
+  const total = items.reduce((s,i)=>s+i.qty*i.price,0);
+  const addr = [shop.addr1, shop.addr2].filter(Boolean).join(', ');
+  document.getElementById('receiptBox').innerHTML = `
+    <div class="receipt-head">
+      <div class="rname">${escapeHtml(shop.name || 'Kiko')}</div>
+      <div class="raddr">${addr ? escapeHtml(addr) : 'Add your address in Shop Details'}${shop.phone ? '<br>'+escapeHtml(shop.phone) : ''}</div>
+    </div>
+    ${items.map(i => `
+      <div class="receipt-line">
+        <span>${escapeHtml(i.name)} <span class="qn">×${i.qty}</span></span>
+        <span class="amt">${money(i.qty*i.price)}</span>
+      </div>
+    `).join('')}
+    <div class="receipt-total">
+      <div class="l">Total</div>
+      <div class="v">${money(total)}</div>
+    </div>
+    ${shop.upi ? `<div class="receipt-foot">Pay via UPI: ${escapeHtml(shop.upi)}</div>` : ''}
+    <div class="receipt-foot">${escapeHtml(shop.footer || 'Thank you, visit again!')}</div>
+  `;
+}
+
+function completeOrder(){
+  if(Object.keys(cart).length === 0) return;
+  cart = {};
+  persistCart();
+  renderCart();
+  toast('Order completed');
+  showView('view-scan');
+}
+
+/* ============================================================
+   ADD / EDIT PRODUCT
+============================================================ */
+let editingBarcode = null;
+
+function openAddProduct(prefillBarcode){
+  editingBarcode = null;
+  document.getElementById('addProdTitle').textContent = 'Add Product';
+  document.getElementById('apSubmitBtn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Add Product`;
+  document.getElementById('apBarcode').value = prefillBarcode || '';
+  document.getElementById('apName').value = '';
+  document.getElementById('apPrice').value = '';
+  showView('view-add-product');
+}
+
+function openEditProduct(barcode){
+  const p = products[barcode];
+  if(!p) return;
+  editingBarcode = barcode;
+  document.getElementById('addProdTitle').textContent = 'Edit Product';
+  document.getElementById('apSubmitBtn').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/></svg> Save Changes`;
+  document.getElementById('apBarcode').value = p.barcode;
+  document.getElementById('apName').value = p.name;
+  document.getElementById('apPrice').value = p.price;
+  showView('view-add-product');
+}
+
+function submitAddProduct(){
+  const barcode = document.getElementById('apBarcode').value.trim();
+  const name = document.getElementById('apName').value.trim();
+  const price = parseFloat(document.getElementById('apPrice').value);
+
+  if(!barcode){ toast('Enter or scan a barcode'); return; }
+  if(!name){ toast('Enter a product name'); return; }
+  if(isNaN(price) || price < 0){ toast('Enter a valid price'); return; }
+
+  if(editingBarcode && editingBarcode !== barcode) delete products[editingBarcode];
+  products[barcode] = { barcode, name, price };
+  persistProducts();
+
+  // if this barcode is already in the cart, refresh its price/name
+  if(cart[barcode]){ cart[barcode].name = name; cart[barcode].price = price; persistCart(); renderCart(); }
+
+  toast(editingBarcode ? 'Product updated' : 'Product added');
+
+  // came from scanning at home with an unknown barcode → add straight to cart
+  if(pendingCartAdd === barcode){
+    addToCart(barcode, 1);
+    pendingCartAdd = null;
+    showView('view-scan');
+  } else if(document.getElementById('view-products').classList.contains('active') || editingBarcode){
+    showView('view-products');
+    renderProductList();
+  } else {
+    showView('view-products');
+    renderProductList();
+  }
+  editingBarcode = null;
+}
+
+function deleteProduct(barcode){
+  if(!confirm('Remove ' + (products[barcode]?.name || 'this product') + ' from your catalog?')) return;
+  delete products[barcode];
+  persistProducts();
+  renderProductList();
+  toast('Product removed');
+}
+
+function renderProductList(){
+  const wrap = document.getElementById('productListWrap');
+  const q = (document.getElementById('pmSearch').value || '').toLowerCase().trim();
+  let items = Object.values(products);
+  if(q) items = items.filter(p => p.name.toLowerCase().includes(q) || p.barcode.includes(q));
+  items.sort((a,b) => a.name.localeCompare(b.name));
+
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty">
+      <div class="bubble"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7V4a1 1 0 011-1h3M21 7V4a1 1 0 00-1-1h-3M3 17v3a1 1 0 001 1h3M21 17v3a1 1 0 01-1 1h-3M7 12h10"/></svg></div>
+      <h3>${q ? 'No matches' : 'No products yet'}</h3>
+      <p>${q ? 'Try a different name or barcode.' : 'Tap the + button to add your first product.'}</p>
+    </div>`;
+    return;
+  }
+  wrap.innerHTML = items.map(p => `
+    <div class="prod-row">
+      <div class="info">
+        <div class="name">${escapeHtml(p.name)}</div>
+        <div class="price">${money(p.price)}</div>
+      </div>
+      <div class="actions">
+        <button class="btn-edit" onclick="openEditProduct('${p.barcode}')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        </button>
+        <button class="btn-del" onclick="deleteProduct('${p.barcode}')">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ============================================================
+   SHOP DETAILS
+============================================================ */
+function loadShopForm(){
+  document.getElementById('shName').value = shop.name || '';
+  document.getElementById('shAddr1').value = shop.addr1 || '';
+  document.getElementById('shAddr2').value = shop.addr2 || '';
+  document.getElementById('shPhone').value = shop.phone || '';
+  document.getElementById('shUpi').value = shop.upi || '';
+  document.getElementById('shFooter').value = shop.footer || '';
+  document.getElementById('shFooterCount').textContent = (shop.footer||'').length + '/150';
+}
+function saveShopDetails(){
+  shop.name = document.getElementById('shName').value.trim() || 'Kiko';
+  shop.addr1 = document.getElementById('shAddr1').value.trim();
+  shop.addr2 = document.getElementById('shAddr2').value.trim();
+  shop.phone = document.getElementById('shPhone').value.trim();
+  shop.upi = document.getElementById('shUpi').value.trim();
+  shop.footer = document.getElementById('shFooter').value.trim();
+  persistShop();
+  renderSettingsHeader();
+  toast('Shop details saved');
+  showView('view-settings');
+}
+function renderSettingsHeader(){
+  document.getElementById('settingsShopName').textContent = shop.name || 'Kiko';
+  document.getElementById('settingsAvatar').textContent = (shop.name || 'K').trim().charAt(0).toUpperCase();
+}
+
+/* ============================================================
+   CAMERA + BARCODE SCANNING
+   Home camera: continuous scan, auto add-to-cart / route to Add Product
+   Overlay camera: single scan for a target text field ('ap' or 'pm')
+============================================================ */
+let homeStream = null, homeDetectLoop = null, homeTrack = null, torchOn = false;
+let overlayStream = null, overlayDetectLoop = null, overlayTarget = null;
+let pendingCartAdd = null;
+let lastScanTime = 0;
+const detectorSupported = 'BarcodeDetector' in window;
+let detector = null;
+if(detectorSupported){
+  try{ detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] }); }
+  catch(e){ detector = null; }
+}
+
+async function startHomeCamera(){
+  const video = document.getElementById('homeVideo');
+  const fallback = document.getElementById('homeCamFallback');
+  if(homeStream){ fallback.style.display='none'; video.style.display='block'; return; }
+  try{
+    homeStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    video.srcObject = homeStream;
+    homeTrack = homeStream.getVideoTracks()[0];
+    fallback.style.display = 'none';
+    video.style.display = 'block';
+    document.getElementById('homeViewfinder').style.display = 'block';
+    if(detector) startHomeDetectLoop();
+    else document.getElementById('scanPill').textContent = 'Live camera — barcode auto-scan not supported here';
+  }catch(e){
+    fallback.style.display = 'flex';
+    video.style.display = 'none';
+    document.getElementById('homeCamMsg').textContent = 'Camera unavailable (' + (e.name || 'permission denied') + '). You can still add items manually.';
+  }
+}
+function stopHomeCamera(){
+  if(homeDetectLoop) cancelAnimationFrame(homeDetectLoop);
+  homeDetectLoop = null;
+  if(homeStream){ homeStream.getTracks().forEach(t=>t.stop()); homeStream = null; homeTrack = null; }
+}
+function toggleHomeCamera(){
+  if(homeStream){ stopHomeCamera(); toast('Camera off'); }
+  else startHomeCamera();
+}
+async function toggleTorch(){
+  if(!homeTrack) { toast('Turn on the camera first'); return; }
+  const caps = homeTrack.getCapabilities ? homeTrack.getCapabilities() : {};
+  if(!caps.torch){ toast('Flashlight not supported on this device'); return; }
+  torchOn = !torchOn;
+  try{ await homeTrack.applyConstraints({ advanced:[{ torch: torchOn }] }); document.getElementById('torchBtn').classList.toggle('active', torchOn); }
+  catch(e){ toast('Could not toggle flashlight'); }
+}
+function startHomeDetectLoop(){
+  const video = document.getElementById('homeVideo');
+  async function tick(){
+    if(video.readyState >= 2 && Date.now() - lastScanTime > 900){
+      try{
+        const codes = await detector.detect(video);
+        if(codes && codes.length){
+          lastScanTime = Date.now();
+          handleHomeScan(codes[0].rawValue);
+        }
+      }catch(e){ /* ignore transient detect errors */ }
+    }
+    homeDetectLoop = requestAnimationFrame(tick);
+  }
+  homeDetectLoop = requestAnimationFrame(tick);
+}
+function handleHomeScan(code){
+  const pill = document.getElementById('scanPill');
+  if(products[code]){
+    addToCart(code, 1);
+    pill.textContent = 'Added: ' + products[code].name;
+    toast(products[code].name + ' added — ' + money(products[code].price));
+  } else {
+    pill.textContent = 'New barcode — add product details';
+    pendingCartAdd = code;
+    openAddProduct(code);
+  }
+  setTimeout(()=>{ pill.textContent = 'Point camera at a barcode'; }, 1800);
+}
+
+/* ---- overlay (single-shot) scanner used by Add Product + Product search ---- */
+function openScanner(target){
+  overlayTarget = target;
+  document.getElementById('scannerOverlay').classList.add('active');
+  startOverlayCamera();
+}
+function closeScanner(){
+  document.getElementById('scannerOverlay').classList.remove('active');
+  if(overlayDetectLoop) cancelAnimationFrame(overlayDetectLoop);
+  overlayDetectLoop = null;
+  if(overlayStream){ overlayStream.getTracks().forEach(t=>t.stop()); overlayStream = null; }
+}
+async function startOverlayCamera(){
+  const video = document.getElementById('overlayVideo');
+  const fallback = document.getElementById('overlayCamFallback');
+  try{
+    overlayStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    video.srcObject = overlayStream;
+    fallback.style.display = 'none';
+    video.style.display = 'block';
+    if(detector){
+      let last = 0;
+      async function tick(){
+        if(video.readyState >= 2 && Date.now() - last > 700){
+          try{
+            const codes = await detector.detect(video);
+            if(codes && codes.length){
+              last = Date.now();
+              handleOverlayScan(codes[0].rawValue);
+              return;
+            }
+          }catch(e){}
+        }
+        overlayDetectLoop = requestAnimationFrame(tick);
+      }
+      overlayDetectLoop = requestAnimationFrame(tick);
+    }
+  }catch(e){
+    fallback.style.display = 'flex';
+    video.style.display = 'none';
+    document.getElementById('overlayCamMsg').textContent = 'Couldn\'t access the camera (' + (e.name || 'permission denied') + '). Type the barcode instead.';
+  }
+}
+function handleOverlayScan(code){
+  if(overlayTarget === 'ap'){ document.getElementById('apBarcode').value = code; }
+  else if(overlayTarget === 'pm'){ document.getElementById('pmSearch').value = code; renderProductList(); }
+  toast('Scanned ' + code);
+  closeScanner();
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+/* ============================================================
+   FULLSCREEN
+============================================================ */
+function toggleFullscreen(){
+  const el = document.documentElement;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if(!isFs){
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(req) req.call(el).catch(()=>{});
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if(exit) exit.call(document).catch(()=>{});
+  }
+}
+function updateFsIcon(){
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  const btn = document.getElementById('fsToggle');
+  btn.innerHTML = isFs
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 3v3a2 2 0 01-2 2H4M21 8h-3a2 2 0 01-2-2V3M3 16h3a2 2 0 012 2v3M16 21v-3a2 2 0 012-2h3"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>';
+}
+document.addEventListener('fullscreenchange', updateFsIcon);
+document.addEventListener('webkitfullscreenchange', updateFsIcon);
+window.addEventListener('load', () => { window.scrollTo(0,1); }); // nudge mobile chrome to hide URL bar
+
+/* ============================================================
+   INIT
+============================================================ */
+loadAll().then(startHomeCamera);
+</script>
+</body>
+</html>
