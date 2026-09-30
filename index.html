@@ -874,13 +874,19 @@ function startHomeDetectLoop(){
   }
   homeDetectLoop = requestAnimationFrame(tick);
 }
+function vibrate(pattern){
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
+
 function handleHomeScan(code){
   const pill = document.getElementById('scanPill');
   if(products[code]){
+    vibrate(35);
     addToCart(code, 1);
     pill.textContent = 'Added: ' + products[code].name;
     toast(products[code].name + ' added — ' + money(products[code].price));
   } else {
+    vibrate([25, 60, 25]);
     pill.textContent = 'New barcode — add product details';
     pendingCartAdd = code;
     openAddProduct(code);
@@ -932,6 +938,7 @@ async function startOverlayCamera(){
   }
 }
 function handleOverlayScan(code){
+  vibrate(35);
   if(overlayTarget === 'ap'){ document.getElementById('apBarcode').value = code; }
   else if(overlayTarget === 'pm'){ document.getElementById('pmSearch').value = code; renderProductList(); }
   toast('Scanned ' + code);
